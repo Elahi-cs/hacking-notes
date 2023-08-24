@@ -1,0 +1,83 @@
+* Linux Fundamentals
+** Introduction
+*** Linux Structure
+**** Philosophy
+     Linux follows five core principles:
+     -- Everything is a file
+     -- Small, single-purpose programs
+     -- Ability to chain programs together to perform complex tasks
+     -- Avoid captive user interfaces
+     -- Configuration data stored in a text file
+**** Components
+     -- Bootloader
+     -- OS Kernel
+     -- Daemons
+     -- OS Shell (bash, zsh, ...)
+     -- Graphics server (graphical sub-system/server called "X-server")
+     -- Window Manager (GNOME, KDE, MATE, ...)
+     -- Utilities
+**** Architecture
+     -- Hardware (peripherals)
+     -- Kernel (core of the OS)
+     -- Shell (CLI)
+     -- System utility (user level)
+**** File System
+     -- / : Top level directory
+     -- /bin : Essential command binaries
+     -- /boot : Static bootloader, kernel exec, files required to boot
+     -- /dev : Device files for hardware access
+     -- /etc : Local system configuration files
+     -- /home : Each user on the system has a subdirectory here
+     -- /lib : Shared library files required for boot (?)
+     -- /media : External removable media (USB)
+     -- /mnt : Temporary mount point (?)
+     -- /opt : Optional files such as third-party tools
+     -- /root : Home directory for root
+     -- /sbin : Executables for system administration (binary system files)
+     -- /tmp : OS and many programs use this to store tmp files (gets deleted at boot)
+     -- /usr : Executables, libraries, man files, ...
+     -- /var : Variable data files (log files, email, webapp files, cron files, ...)
+**** System information commands
+***** Host
+      -- `whoami`: Displays current username
+      -- `id`: Returns user identity
+      -- `hostname`: Sets or prints the name of current host system
+      -- `who`: Displays who is logged in.
+      -- `uname`: Prints basic information about the operating system name and hardware. Use with `-a` flag to get all the information possible.
+      -- `ps`: Process status.
+      -- `env`: Prints environment or sets and executes command.
+***** Network
+      -- `ifconfig`: Used to assign or view an address to a network interface and/or configure its parameters
+      -- `ip`: Show or manipulate routing, network devices, interfaces, and tunnels.
+      -- `netstat`: Shows network status.
+      -- `ss`: Investigate sockets
+***** Devices
+      -- `lsblk`: Lists block devices.
+      -- `lsusb`: Lists USB devices.
+      -- `lsof`: Lists opened files.
+      -- `lspci`: Lists PCI devices.
+***** Files
+      -- `pwd`: Returns working directory name
+      -- `tree`: ls in a tree.
+      -- `find`: Find files and folders
+      -- `more`: Shows a file's contents
+      -- `less`: Shows a file's contents but better
+      -- `head`: Shows the first few lines of a file
+      -- `tail`: Shows the last few lines of a file
+***** Standard I/O
+      -- `wc -l`: Counts the number of lines in the standard input
+      -- `sort`: Sorts the lines in the standard input alphabetically or numerically
+      -- `grep`: Filters the standard input
+      -- `cut`: Snips lines of input
+      -- `tr [old] [new]`: Replaces input by specified character
+      -- `column -t`: Displays input as columns in tabular form
+      -- `awk`: Unsure
+      -- `sed`: Substitute patterns of text. Prolly what Vim uses to replace text.
+      @code shell
+      find [path] -type [f/d] -name [name] -exec [command to be executed after]; 2>/dev/null
+      @end
+**** System manipulation commands
+     -- `touch`: Create an empty file
+     -- `mkdir`: Create an empty directory. Use with -p option to add parent directories
+     -- `mv`: Move/rename files and/or directories
+     -- `cp`: Copy files and/or directories

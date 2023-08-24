@@ -1,0 +1,30 @@
+* Cool commands
+
+  @code shell
+  find [path] -type [f/d] -name [name] -exec [command to be executed after]; 2>/dev/null
+  @end
+  ________________
+  @code shell
+  ssh [username]@[IP address]
+  @end
+  to connect to the IP address via SSH
+
+  ______________________________________________
+
+  @code shell
+  dpkg -l | grep "^ii" | wc -l
+  @end
+
+  gets the number of installed packages in a Debian system
+  lists all Debian packages installed | filters only entries (removes headers) | counts each line
+
+  _______________________
+
+  @code shell
+  netstat -ltup4 | grep -v "localhost"
+  @end
+
+  gets the number of services that are listening in the system on all interfaces, excluding localhost and IPv6
+
+  show all listening services using IPv4 | exlude those that are listening at localhost
+
