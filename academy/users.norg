@@ -1,0 +1,9 @@
+** User management commands:
+   -- `sudo` Execute command as superuser
+   -- `su` Switch to another user and execute shell (superuser by default)
+   -- `useradd` Creates a new user
+   -- `userdel` Deletes a user
+   -- `usermod` Modifies a user
+   -- `addgroup` Adds a group
+   -- `delgroup` Removes a group
+   -- `passwd` Changes user password

@@ -1,0 +1,1 @@
+-- `nmap -p- -sV` to scan for all open ports

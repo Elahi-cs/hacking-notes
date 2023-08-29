@@ -1,0 +1,3 @@
+-- SMB (Server Message Block, port 445) is yet another unsecure service that allows for remote connections
+-- `smbclient -L` lists a host's available shares
+-- If there's an unsecure one (available to access with a blank password) you can use it to log into the share and get files with `get`

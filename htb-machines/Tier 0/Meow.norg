@@ -1,0 +1,3 @@
+-- `nmap [host] -sV` to scan for open ports
+-- `telnet` (port 23) is an old-ass service that allows for a host connection
+-- if the system is poorly configured you can log into a host over telnet with the user `root` and a blank password

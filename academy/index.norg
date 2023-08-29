@@ -81,3 +81,6 @@
      -- `mkdir`: Create an empty directory. Use with -p option to add parent directories
      -- `mv`: Move/rename files and/or directories
      -- `cp`: Copy files and/or directories
+*** {:regex:}[Regular Expressions]
+*** {:permissions:}[Permission Management]
+*** {:users:}[User Management]

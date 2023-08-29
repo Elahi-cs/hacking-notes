@@ -1,0 +1,4 @@
+-- FTP (port 21) is an unsecure File Transfer Protocol
+-- It allows for unaccounted login with the `anonymous` username in misconfigured systems
+-- `ftp -h` to see commands
+-- `get [filename]` to download files over an FTP connection

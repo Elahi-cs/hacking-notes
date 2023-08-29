@@ -1,0 +1,13 @@
+{:index:}[Index]
+
+** Grouping Operators
+   -- `(a)` Group parts of a regex
+   -- `[a-z]` List of characters to search for
+   -- `{1, 10}` Define quantifiers (range or number of repetitions of previous pattern)
+   -- `|` OR 
+   -- `.*` AND (?)
+      Example AND usage:
+   @code shell
+   grep -E "(my.*false)" /etc/passwd
+   @end
+

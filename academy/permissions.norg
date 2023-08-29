@@ -1,0 +1,87 @@
+{:index:}[Index]
+
+** Changing Permissions
+   Three different types of permissions:
+   -- Read (r)
+   -- Write (w)
+   -- Execute (x)
+   _____
+   The permissions can be set for:
+   -- Owner (u)
+   -- Group (g)
+   -- Others (o)
+   -- All users (a)
+   ____
+
+   Example
+
+   For a shell that outputs the following when ls-ing a directory:
+   cry0l1t3@htb[/htb]$ ls -l shell
+
+   -rwxr-x--x   1 cry0l1t3 htbteam 0 May  4 22:12 shell
+
+   Applying: 
+
+   @code shell
+   chmod a+r shell && ls -l shell
+   @end
+
+   modifies the read permission for all users so the output would be:
+
+   -rwxr-xr-x   1 cry0l1t3 htbteam 0 May  4 22:12 shell
+
+   ____
+** Understanding Octal Representation
+
+   Binary Notation:                4 2 1  |  4 2 1  |  4 2 1
+   ______
+   Binary Representation:          1 1 1  |  1 0 1  |  1 0 0
+   ___
+   Octal Value:                      7    |    5    |    4
+   ____
+   Permission Representation:      r w x  |  r - x  |  r - -
+
+** Changing Owner
+   @code shell
+   chown <user>:<group> <file/directory>
+   @end
+
+** SUID & SGID
+   Set User ID (SUID) & Set Group ID (SGID) are bits that among other things allow users to run programs with the rights of another user. 
+
+   To quote ChatGPT:
+   > Imagine you're throwing a big party, and you need some help managing things. You want to make sure that some tasks can be done by specific people without giving them access to everything. That's where SUID and SGID come into play – they're like special party hats that certain people wear to indicate they have temporary superpowers for certain tasks.
+
+   > 1. SUID (Set User ID):
+
+   > Think of SUID as a magical hat that someone wears at the party. When a file has the SUID permission, it's like giving the person who runs that file a temporary boost of power, but only for that particular task. They don't get permanent control over everything, just a specific job.
+
+   > For example, if you have a program that only administrators are supposed to run, you can give it the SUID permission. So, even if a regular guest runs the program, it will run with the administrator's special powers for that moment. It's like letting someone use your VIP access card for a while.
+
+   > 2. SGID (Set Group ID):
+
+   > Now, let's say you have a group of friends who are responsible for different parts of the party. Some handle the music, some take care of the food, and others manage the decorations. You want to make sure that no matter who does the job, it's done according to the group's rules.
+
+   > This is where SGID comes in. It's like a group-themed party hat. When a directory has the SGID permission, any file created inside that directory will automatically inherit the group of the directory itself. So, no matter which friend creates a new file, it's automatically associated with the group's responsibilities.
+
+   > In a nutshell:
+
+   > SUID (Set User ID) is like a special hat that lets someone temporarily use the powers of another person (usually the file owner) to do a specific task.
+
+   > SGID (Set Group ID) is like a themed party hat for directories. It ensures that any new files or subdirectories created in that directory automatically inherit the group of the parent directory.
+
+   > Remember, just like at a party, you want to be careful who gets these special hats. Giving these permissions to the wrong files or people could lead to unintended consequences or security risks.
+
+** Sticky bits
+
+   >    Imagine you're organizing a community art project where people can contribute their unique pieces to a shared wall. Now, you want to make sure that everyone can add their art, but you also want to maintain some order and prevent anyone from removing or tampering with other people's contributions.
+   > 
+   > This is where the sticky bit comes into play. It's like a magical rule that ensures that each artist's work sticks around, even if others have permission to modify or delete files in the shared space.
+   > 
+   > In a Linux system, the sticky bit is often applied to directories. When the sticky bit is set on a directory, it means that even if users have permission to write to that directory (add files or modify existing ones), they can only delete or move the files that they own. They can't mess with other people's files, even if they have the necessary permissions.
+   > 
+   > Here's how the sticky bit works:
+   > 
+   > Let's say you have a directory where multiple users can upload files. If the sticky bit is set on that directory, whenever User A uploads a file, they are the owner of that file. Even if User B, who also has permission to write to the directory, tries to delete or move User A's file, they won't be able to. The sticky bit ensures that each user can manage their own files, but not interfere with others'.
+
+   > In a nutshell, the sticky bit is like the organizer of an art project making sure that everyone's creations stay put and can't be tampered with by others, even when they have some level of access to the same space.
