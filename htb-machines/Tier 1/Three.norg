@@ -1,0 +1,5 @@
+-- PLEASE add the hosts to /etc/hosts
+-- `aws s3 ls --endpoint=[url] [container]` to list container stuff
+-- If you can upload a file to a PHP-run web storage you get to execute arbitrary code (RCE)
+-- `cp` and `mv` are also used as `aws s3` commands
+-- I still don't know how to execute a reverse shell

