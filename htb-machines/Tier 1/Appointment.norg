@@ -1,2 +1,0 @@
--- `nmap -sC [host]` is considered intrusive and shouldn't be used on a target without permission
--- How do we detect the DB used by a webapp?
