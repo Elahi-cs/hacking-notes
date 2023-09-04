@@ -21,7 +21,7 @@ Things I've done to get in:
    -- Uploaded reverse shell script
    -- Found password in PHP web code
    -- Used the article above to `su` into the user with the found password (it also made reverse shell way more convenient)
-   -- Used `group -l` to list the groups and found one the user belonged to (there's an easier way to do this TODO: find out how)
+   -- Used id to find the groups the user belonged to.
    -- Found the group was able to execute a program that ran `cat` as root
    -- Wrote a script that opened a shell, named it `cat` and appended it at the beginning of $PATH so root would run it first.
    -- Once in a root shell, searched around for the root flag
