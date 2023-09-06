@@ -1,0 +1,18 @@
+The nmap full port scan `nmap -sC -sV -p- $TARGET_IP` shows more open ports than a maritime trade city.
+
+@code txt
+22/tcp   open  ssh             OpenSSH 8.2p1 Ubuntu 4ubuntu0.3 (Ubuntu Linux; protocol 2.0)
+6789/tcp open  ibm-db2-admin?
+8080/tcp open  http-proxy
+8443/tcp open  ssl/nagios-nsca Nagios NSCA
+8843/tcp open  ssl/unknown
+8880/tcp open  cddbp-alt?
+@end
+
+All open ports in the 8000s range seem to return some kind of HTTP response. Let's try them out in the browser.
+
+Port 8443 returns a UniFi login page. The name of the machine makes me suspect this is where the vulnerability will be.
+
+I tested the target for the vulnerability in {https://www.sprocketsecurity.com/resources/another-log4j-on-the-fire-unifi#mitigation}[this article] but the machine doesn't seem to be vulnerable to it [EDIT: My testing methods were wrong] 
+
+
