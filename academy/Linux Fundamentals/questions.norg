@@ -1,2 +1,3 @@
 -- {:index:**** Components} What's the difference between a daemon and a utility?
--- {:index:**** Components} What's the difference between a daemon and a utility?
+-- {:filesystem:* File System Management} Can the inode table be read by a user? If so, how?
+

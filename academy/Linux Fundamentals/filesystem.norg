@@ -1,0 +1,25 @@
+* File System Management
+  Hierarchical structure that is composed of various components. At the top of this structure is the inode table, which stores information associated with each file and directory on a Linux system and contain metadata about the file or directory, such as permissions, size, type, owner, etc.
+  Files are stored either as regular files or directories. The third type of file is symbolic link which is a reference to the other two.
+
+** Disks and Drives
+   `fdisk` allows us to create, delete, and manage partitions on a drive, as well as display information about the partition table.
+   Each partition can be formatted with a specific file system (ext4, NTFS, FAT32,...).
+   The most common partitioning tools on Linux are `fdisk`, `gpart`, and `GParted`.
+   `fdisk -l` gives information about the disks
+
+** Mounting
+   The process of assigning a logical partition (drive) to a specific directory on Linux. It involves attaching a drive to a specific directory, making it accessible to the file system hierarchy.
+   The `mount` tool is used for this.
+*** Mounted File Systems at Boot
+    The `/etc/fstab` file is used to define the default file systems that are mounted at boot time.
+*** List Mounted Drives
+    Just `mount` with no arguments.
+*** Mount a USB drive
+    `sudo mount /dev/sdb1 /mnt/usb` mounts a USB drive with the device name `/dev/sdb1` to the directory `/mnt/usb`
+*** Unmount
+    `sudo umount /mnt/usb` 
+    We can't unmount a file system that is in use by a running process. To check for that we can use `lsof` to list the open files on the file system.
+
+
+

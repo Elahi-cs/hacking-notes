@@ -46,6 +46,7 @@
       -- `uname`: Prints basic information about the operating system name and hardware. Use with `-a` flag to get all the information possible.
       -- `ps`: Process status.
       -- `env`: Prints environment or sets and executes command.
+      -- `fdisk -l`: Prints information about disks.
 ***** Network
       -- `ifconfig`: Used to assign or view an address to a network interface and/or configure its parameters
       -- `ip`: Show or manipulate routing, network devices, interfaces, and tunnels.

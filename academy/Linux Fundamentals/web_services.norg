@@ -1,0 +1,10 @@
+* Web Services
+** Servers
+   The most used are IIS, Nginx and Apache.
+   `apt install apache2` to install it
+** Commands
+   -- `curl` sends requests and recieves responses from the command line
+      `curl http://localhost` to test the Apache server after having started it
+   -- `wget` is like `curl` but downloads and stores the content from the response
+   -- `python3 -m http.server [PORT]` starts an HTTP server in the given port.
+

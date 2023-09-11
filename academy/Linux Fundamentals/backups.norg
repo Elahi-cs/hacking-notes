@@ -1,0 +1,33 @@
+* Backup and Restore
+** Tools
+*** Rsync 
+    Open source tool to back up files and folders to a remote location
+    `sudo apt install rsync` to install it
+    -- `rsync -av /path/to/directory user@backup_server:/path/to/backup/dir` to backup an entire directory
+    -- @code shell
+       rsync -avz --backup --backup-dir=/path/to/backup/folder --delete /path/to/mydirectory user@backup_server:/path/to/backup/directory
+       @end
+       With this command we backup `mydirectory` to the remote `backup_server` preserving all file attributes and enabling compression `-z`.
+       The `--backup` option creates additional backups in the specified directory.
+       The `--delete`option removes files from the remote hoste that are no longer present in the source directory.
+    -- @code shell
+       rsync -av user@remote_host:/path/to/backup/directory /path/to/mydirectory
+       @end
+       to retore our backup.
+**** Encrypted Rsync
+     Uses SSH to encrypt data as it's being transfered.
+    @code shell
+     rsync -avz -e ssh /path/to/mydirectory user@backup_server:/path/to/backup/directory
+     @end
+**** Auto-Synchronization
+     By using a combination of `cron` and `rsync` we can automate the synchronization process.
+     @code bash
+     #RSYNC_Backup.sh
+     rsync -avz -e ssh /path/to/mydirectory user@backup_sever:/path/to/backup/directory
+     @end
+     Then we can creat a crontab to run hourly:
+     @code txt
+     0 * * * * /path/to/RSYNC_Backup.sh
+     @end
+** Deja Dup
+**  Duplicity
