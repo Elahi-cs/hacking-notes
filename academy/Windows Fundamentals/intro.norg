@@ -1,0 +1,10 @@
+* Introduction to Windows
+@code shell
+  Get-WmiObject -Class win32_OperatingSystem | select Version,BuildNumber
+  @end
+to get the Windows version and BuildNumber
+
+  Other useful classes with `Get-WmiObject`
+  -- `Win32_Process` to get a process listing
+  -- `Win32_Service` to get a listing of services
+
